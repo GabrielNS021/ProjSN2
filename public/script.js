@@ -4,7 +4,7 @@ function searchCharacter() {
     .then(res => res.json())
     .then(data => {
       const resultsDiv = document.getElementById('results');
-      resultsDiv.innerHTML = ''; // limpa resultados anteriores
+      resultsDiv.innerHTML = '';
 
       if (data.response === 'success') {
         data.results.forEach(hero => {
@@ -34,6 +34,13 @@ function searchCharacter() {
               </ul>
             </div>
           `;
+
+          // Adiciona o botão via JS corretamente
+          const addButton = document.createElement('button');
+          addButton.textContent = 'Adicionar aos Favoritos';
+          addButton.addEventListener('click', () => addToFavorites(hero));
+          card.querySelector('.card-body').appendChild(addButton);
+
           resultsDiv.appendChild(card);
         });
       } else {
@@ -43,5 +50,32 @@ function searchCharacter() {
     .catch(err => {
       console.error(err);
       document.getElementById('results').innerHTML = '<p>Erro ao buscar personagem.</p>';
+    });
+}
+
+function addToFavorites(hero) {
+  const favoriteData = {
+    id: hero.id,
+    name: hero.name,
+    image: hero.image.url
+  };
+
+  fetch('/favoritos', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(favoriteData)
+  })
+    .then(res => {
+      if (res.ok) {
+        alert(`"${hero.name}" adicionado aos favoritos!`);
+      } else {
+        alert('Erro ao adicionar aos favoritos.');
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert('Erro ao conectar com o servidor.');
     });
 }
