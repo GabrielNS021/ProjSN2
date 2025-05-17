@@ -239,13 +239,9 @@
         });
 
         if (res.ok) {
-          btn.textContent = 'Adicionado';
-          btn.disabled = true;
           loadFavorites();
         } else if (res.status === 409) {
           alert(`${hero.name} já está nos favoritos.`);
-          btn.textContent = 'Adicionado';
-          btn.disabled = true;
         } else {
           const errorData = await res.json().catch(() => ({ error: "Erro desconhecido ao adicionar." }));
           alert(`Erro ao adicionar: ${errorData.error || res.statusText}`);
