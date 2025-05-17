@@ -35,7 +35,6 @@ function searchCharacter() {
             </div>
           `;
 
-          // Adiciona o botão via JS corretamente
           const addButton = document.createElement('button');
           addButton.textContent = 'Adicionar aos Favoritos';
           addButton.addEventListener('click', () => addToFavorites(hero));

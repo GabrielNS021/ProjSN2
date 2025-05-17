@@ -86,13 +86,13 @@
     }
 
     #results .card {
-        padding-right: 15px;
-        min-height: 150px;
+         min-height: 150px;
+         padding-right: 150px;
     }
 
     #favorites .card {
-        padding-right: 160px;
-        min-height: 100px;
+        min-height: 150px;
+        padding-right: 180px;
     }
 
     .card-header {
@@ -169,107 +169,183 @@
     async function searchCharacter() {
       const name = searchInput.value.trim();
       if (!name) return;
-      const res = await fetch(`/search?name=${encodeURIComponent(name)}`);
-      const data = await res.json();
-      resultsDiv.innerHTML = '';
-      if (data.response === 'success') {
-        data.results.forEach(hero => {
+      resultsDiv.innerHTML = '<p>Buscando...</p>';
+      try {
+        const res = await fetch(`/search?name=${encodeURIComponent(name)}`);
+        if (!res.ok) throw new Error(`Erro na busca: ${res.statusText}`);
+        const data = await res.json();
+        resultsDiv.innerHTML = '';
+        if (data.response === 'success' && data.results) {
+          data.results.forEach(hero => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+              <div class="card-header">
+                <img src="${hero.image.url}" alt="${hero.name}">
+                <h2>${hero.name}</h2>
+              </div>
+              <div class="card-body">
+                <p><strong>Nome real:</strong> ${hero.biography['full-name'] || 'N/A'}</p>
+                <p><strong>Editor:</strong> ${hero.biography.publisher || 'N/A'}</p>
+                <p><strong>Local de nascimento:</strong> ${hero.biography['place-of-birth'] || 'N/A'}</p>
+                <p><strong>Gênero:</strong> ${hero.appearance.gender || 'N/A'} | <strong>Raça:</strong> ${hero.appearance.race || 'N/A'}</p>
+                <p><strong>Altura:</strong> ${Array.isArray(hero.appearance.height) ? hero.appearance.height.join(', ') : 'N/A'} | <strong>Peso:</strong> ${Array.isArray(hero.appearance.weight) ? hero.appearance.weight.join(', ') : 'N/A'}</p>
+                <p><strong>Ocupação:</strong> ${hero.work.occupation || 'N/A'}</p>
+                <p><strong>Habilidades:</strong></p>
+                <ul>
+                  <li>Inteligência: ${hero.powerstats.intelligence || 'N/A'}</li>
+                  <li>Força: ${hero.powerstats.strength || 'N/A'}</li>
+                  <li>Velocidade: ${hero.powerstats.speed || 'N/A'}</li>
+                  <li>Durabilidade: ${hero.powerstats.durability || 'N/A'}</li>
+                  <li>Poder: ${hero.powerstats.power || 'N/A'}</li>
+                  <li>Combate: ${hero.powerstats.combat || 'N/A'}</li>
+                </ul>
+              </div>
+            `;
+            const addBtn = document.createElement('button');
+            addBtn.textContent = 'Adicionar aos Favoritos';
+            addBtn.addEventListener('click', () => addToFavorites(hero, addBtn));
+            const footer = document.createElement('div');
+            footer.className = 'card-footer';
+            footer.appendChild(addBtn);
+            card.appendChild(footer);
+            resultsDiv.appendChild(card);
+          });
+        } else {
+          resultsDiv.innerHTML = `<p>${data.error || 'Nenhum personagem encontrado.'}</p>`;
+        }
+      } catch (error) {
+        console.error("Erro ao buscar personagem:", error);
+        resultsDiv.innerHTML = '<p>Erro ao conectar com o servidor de busca.</p>';
+      }
+    }
+
+    async function addToFavorites(hero, btn) {
+      const favoriteData = {
+        id: hero.id,
+        name: hero.name,
+        image: hero.image,
+        biography: hero.biography,
+        appearance: hero.appearance,
+        work: hero.work,
+        powerstats: hero.powerstats
+      };
+
+      try {
+        const res = await fetch('/favoritos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(favoriteData)
+        });
+
+        if (res.ok) {
+          btn.textContent = 'Adicionado';
+          btn.disabled = true;
+          loadFavorites();
+        } else if (res.status === 409) {
+          alert(`${hero.name} já está nos favoritos.`);
+          btn.textContent = 'Adicionado';
+          btn.disabled = true;
+        } else {
+          const errorData = await res.json().catch(() => ({ error: "Erro desconhecido ao adicionar." }));
+          alert(`Erro ao adicionar: ${errorData.error || res.statusText}`);
+        }
+      } catch (error) {
+        console.error("Erro em addToFavorites:", error);
+        alert('Erro de conexão ao adicionar aos favoritos.');
+      }
+    }
+
+    async function loadFavorites() {
+      const filter = favSearchInput.value.trim().toLowerCase();
+      favoritesDiv.innerHTML = '';
+      try {
+        const res = await fetch('/favoritos');
+        if (!res.ok) throw new Error(`Erro ao carregar favoritos: ${res.statusText}`);
+        const data = await res.json();
+
+        data.filter(hero => hero.name.toLowerCase().includes(filter)).forEach(hero => {
           const card = document.createElement('div');
           card.className = 'card';
+
+          const imageUrl = hero.image;
+
+          let apelidoDisplay = '';
+          if (hero.apelido && hero.apelido.trim() !== '') {
+              apelidoDisplay = `<p><strong>Apelido:</strong> ${hero.apelido}</p>`;
+          }
+
           card.innerHTML = `
             <div class="card-header">
-              <img src="${hero.image.url}" alt="${hero.name}">
-              <h2>${hero.name}</h2>
+              <img src="${imageUrl}" alt="${hero.name}">
+              <div>
+                  <h2>${hero.name}</h2>
+                  ${apelidoDisplay}
+              </div>
             </div>
             <div class="card-body">
               <p><strong>Nome real:</strong> ${hero.biography['full-name'] || 'N/A'}</p>
               <p><strong>Editor:</strong> ${hero.biography.publisher || 'N/A'}</p>
               <p><strong>Local de nascimento:</strong> ${hero.biography['place-of-birth'] || 'N/A'}</p>
               <p><strong>Gênero:</strong> ${hero.appearance.gender || 'N/A'} | <strong>Raça:</strong> ${hero.appearance.race || 'N/A'}</p>
-              <p><strong>Altura:</strong> ${hero.appearance.height.join(', ')} | <strong>Peso:</strong> ${hero.appearance.weight.join(', ')}</p>
+              <p><strong>Altura:</strong> ${Array.isArray(hero.appearance.height) ? hero.appearance.height.join(', ') : 'N/A'} | <strong>Peso:</strong> ${Array.isArray(hero.appearance.weight) ? hero.appearance.weight.join(', ') : 'N/A'}</p>
               <p><strong>Ocupação:</strong> ${hero.work.occupation || 'N/A'}</p>
               <p><strong>Habilidades:</strong></p>
               <ul>
-                <li>Inteligência: ${hero.powerstats.intelligence}</li>
-                <li>Força: ${hero.powerstats.strength}</li>
-                <li>Velocidade: ${hero.powerstats.speed}</li>
-                <li>Durabilidade: ${hero.powerstats.durability}</li>
-                <li>Poder: ${hero.powerstats.power}</li>
-                <li>Combate: ${hero.powerstats.combat}</li>
+                <li>Inteligência: ${hero.powerstats.intelligence || 'N/A'}</li>
+                <li>Força: ${hero.powerstats.strength || 'N/A'}</li>
+                <li>Velocidade: ${hero.powerstats.speed || 'N/A'}</li>
+                <li>Durabilidade: ${hero.powerstats.durability || 'N/A'}</li>
+                <li>Poder: ${hero.powerstats.power || 'N/A'}</li>
+                <li>Combate: ${hero.powerstats.combat || 'N/A'}</li>
               </ul>
             </div>
           `;
-          const addBtn = document.createElement('button');
-          addBtn.textContent = 'Adicionar aos Favoritos';
-          addBtn.addEventListener('click', () => addToFavorites(hero, addBtn));
           const footer = document.createElement('div');
-          footer.className = 'card-footer';
-          footer.appendChild(addBtn);
+          footer.className = 'actions';
+          const removeBtn = document.createElement('button');
+          removeBtn.textContent = 'Remover dos Favoritos';
+          removeBtn.addEventListener('click', () => removeFavorite(hero.id));
+          const editBtn = document.createElement('button');
+          editBtn.textContent = 'Editar Apelido';
+          editBtn.addEventListener('click', () => editNickname(hero.id, hero.apelido || ''));
+          footer.appendChild(removeBtn);
+          footer.appendChild(editBtn);
           card.appendChild(footer);
-          resultsDiv.appendChild(card);
+          favoritesDiv.appendChild(card);
         });
-      } else {
-        resultsDiv.innerHTML = '<p>Nenhum personagem encontrado.</p>';
+      } catch (error) {
+        console.error("Erro ao carregar favoritos:", error);
+        favoritesDiv.innerHTML = '<p>Erro ao carregar favoritos.</p>';
       }
-    }
-
-    async function addToFavorites(hero, btn) {
-      const favoriteData = { id: hero.id, name: hero.name, image: hero.image.url };
-      const res = await fetch('/favoritos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(favoriteData)
-      });
-      if (res.ok) {
-        btn.textContent = 'Adicionado';
-        btn.disabled = true;
-        loadFavorites();
-      }
-    }
-
-    async function loadFavorites() {
-      const filter = favSearchInput.value.trim().toLowerCase();
-      const res = await fetch('/favoritos');
-      const data = await res.json();
-      favoritesDiv.innerHTML = '';
-      data.filter(f => f.name.toLowerCase().includes(filter)).forEach(fav => {
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.innerHTML = `
-          <div class="card-header">
-            <img src="${fav.image}" alt="${fav.name}">
-            <h2>${fav.name}</h2>
-          </div>
-        `;
-        const footer = document.createElement('div');
-        footer.className = 'actions';
-        const removeBtn = document.createElement('button');
-        removeBtn.textContent = 'Remover dos Favoritos';
-        removeBtn.addEventListener('click', () => removeFavorite(fav.id));
-        const editBtn = document.createElement('button');
-        editBtn.textContent = 'Editar Apelido';
-        editBtn.addEventListener('click', () => editNickname(fav.id, fav.apelido || ''));
-        footer.appendChild(removeBtn);
-        footer.appendChild(editBtn);
-        card.appendChild(footer);
-        favoritesDiv.appendChild(card);
-      });
     }
 
     async function removeFavorite(id) {
-      await fetch(`/favoritos/${id}`, { method: 'DELETE' });
-      loadFavorites();
+      try {
+        const res = await fetch(`/favoritos/${id}`, { method: 'DELETE' });
+        if (!res.ok && res.status !== 204 ) throw new Error(`Erro ao remover: ${res.statusText}`);
+        loadFavorites();
+      } catch (error) {
+        console.error("Erro ao remover favorito:", error);
+        alert('Erro ao remover favorito.');
+      }
     }
 
     async function editNickname(id, current) {
       const novo = prompt('Novo apelido:', current || '');
       if (novo !== null) {
-        await fetch(`/favoritos/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ apelido: novo })
-        });
-        loadFavorites();
+        try {
+          const res = await fetch(`/favoritos/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ apelido: novo.trim() })
+          });
+          if (!res.ok) throw new Error(`Erro ao editar apelido: ${res.statusText}`);
+          loadFavorites();
+        } catch (error) {
+          console.error("Erro ao editar apelido:", error);
+          alert('Erro ao editar apelido.');
+        }
       }
     }
 

@@ -9,9 +9,6 @@ const API_URL = 'https://superheroapi.com/api/eb78f42c1aece237a7276dff8ca900da';
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ==============================
-// ROTA PARA BUSCAR PERSONAGENS
-// ==============================
 app.get('/search', async (req, res) => {
   const name = req.query.name;
   try {
@@ -22,59 +19,70 @@ app.get('/search', async (req, res) => {
   }
 });
 
-// ==============================
-// CRUD DE FAVORITOS
-// ==============================
 let favoritos = [];
-let proximoId = 1;
+
 
 app.post('/favoritos', (req, res) => {
-  const { id, name, image } = req.body;
+  const { id, name, image, biography, appearance, work, powerstats } = req.body;
 
-  if (!id || !name || !image) {
-    return res.status(400).json({ error: 'Dados incompletos.' });
+  if (!id || !name || !image || !biography || !appearance || !work || !powerstats) {
+    return res.status(400).json({ error: 'Dados incompletos do herói para favoritar.' });
   }
 
-  favoritos.push({ id, name, image });
-  res.status(201).json({ message: 'Favorito adicionado com sucesso.' });
+  if (favoritos.some(f => f.id === id)) {
+    return res.status(409).json({ message: 'Herói já está nos favoritos.' });
+  }
+
+  const novoFavorito = {
+    id,
+    name,
+    image: image.url,
+    biography,
+    appearance,
+    work,
+    powerstats,
+    apelido: ''
+  };
+
+  favoritos.push(novoFavorito);
+  res.status(201).json({ message: 'Favorito adicionado com sucesso.', favorito: novoFavorito });
 });
 
 
-// Listar todos
 app.get('/favoritos', (req, res) => {
   res.json(favoritos);
 });
 
-// Buscar um favorito
 app.get('/favoritos/:id', (req, res) => {
-  const id = parseInt(req.params.id);
-  const favorito = favoritos.find(f => f.id === id);
+  const idParam = req.params.id;
+  const favorito = favoritos.find(f => f.id === idParam);
   if (!favorito) {
     return res.status(404).json({ erro: 'Favorito não encontrado' });
   }
   res.json(favorito);
 });
 
-// Atualizar
 app.put('/favoritos/:id', (req, res) => {
-  const id = parseInt(req.params.id);
-  const favorito = favoritos.find(f => f.id === id);
-  if (!favorito) {
+  const idParam = req.params.id;
+  const favoritoIndex = favoritos.findIndex(f => f.id === idParam);
+
+  if (favoritoIndex === -1) {
     return res.status(404).json({ erro: 'Favorito não encontrado' });
   }
 
-  const { nome, imagem, comentario } = req.body;
-  if (nome) favorito.nome = nome;
-  if (imagem) favorito.imagem = imagem;
-  if (comentario !== undefined) favorito.comentario = comentario;
+  const { apelido } = req.body;
 
-  res.json(favorito);
+  if (apelido !== undefined) {
+    favoritos[favoritoIndex].apelido = apelido.trim();
+  }
+
+  res.json(favoritos[favoritoIndex]);
 });
 
-// Deletar
+
 app.delete('/favoritos/:id', (req, res) => {
-  const id = parseInt(req.params.id);
-  const index = favoritos.findIndex(f => f.id === id);
+  const idParam = req.params.id;
+  const index = favoritos.findIndex(f => f.id === idParam);
   if (index === -1) {
     return res.status(404).json({ erro: 'Favorito não encontrado' });
   }
@@ -83,9 +91,6 @@ app.delete('/favoritos/:id', (req, res) => {
   res.status(204).send();
 });
 
-// ==============================
-// INICIAR SERVIDOR
-// ==============================
 app.listen(PORT, () => {
   console.log(`Servidor rodando em http://localhost:${PORT}`);
 });
