@@ -1,36 +1,98 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <title>Buscar Super-Heróis</title>
+  <meta charset="UTF-8">
+  <title>Super-Heróis Favoritos</title>
   <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+
     body {
       font-family: Arial, sans-serif;
-      padding: 20px;
-      background: #f5f5f5;
+      background: linear-gradient(to right, #000000, #27272A);
+      color: #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px 40px;
+      box-sizing: border-box;
     }
 
-    #search-bar {
+    .container {
+      display: flex;
+      gap: 40px;
+      width: 100%;
+      height: 100%;
+    }
+
+    .section {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      flex: 1;
+      height: 100%;
+      overflow-y: auto;
+      box-sizing: border-box;
+    }
+
+    .section h1 {
+      text-align: center;
+      margin-top: 0;
+    }
+    .search-bar {
+      display: flex;
+      gap: 10px;
       margin-bottom: 20px;
     }
-
-    input[type="text"] {
-      padding: 5px;
-      width: 250px;
+    .search-bar input {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
     }
 
-    button {
-      padding: 6px 12px;
-      margin-left: 5px;
+    .search-bar button,
+    .card-footer button,
+    .actions button {
+      padding: 8px 12px;
+      background: #333;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.2s ease-in-out;
+    }
+
+    .search-bar button:hover,
+    .card-footer button:hover,
+    .actions button:hover {
+      background: #555;
+    }
+
+    .card-footer button:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
     }
 
     .card {
-      background-color: white;
-      border: 1px solid #ccc;
+      background: #f9f9f9;
+      padding: 15px;
       margin-bottom: 20px;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      position: relative;
+    }
+
+    #results .card {
+        padding-right: 15px;
+        min-height: 150px;
+    }
+
+    #favorites .card {
+        padding-right: 160px;
+        min-height: 100px;
     }
 
     .card-header {
@@ -38,32 +100,180 @@
       align-items: center;
       gap: 20px;
     }
-
     .card-header img {
-      height: 120px;
-      border-radius: 10px;
+      height: 100px;
+      border-radius: 8px;
     }
-
     .card-body {
       margin-top: 10px;
     }
-
+    .card-body p, .card-body li {
+      margin: 5px 0;
+    }
     .card-body ul {
       padding-left: 20px;
     }
 
-    .card-body p, .card-body li {
-      margin: 5px 0;
+    #results .card-footer {
+      position: absolute;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    #favorites .actions {
+      position: absolute;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
   </style>
 </head>
 <body>
-  <div id="search-bar">
-    <input type="text" id="searchInput" placeholder="Digite o nome do personagem">
-    <button onclick="searchCharacter()">Buscar</button>
-  </div>
-  <div id="results"></div>
+  <div class="container">
+    <div class="section">
+      <h1>Buscar Heróis</h1>
+      <div class="search-bar">
+        <input id="searchInput" type="text" placeholder="Digite o nome do personagem">
+        <button id="searchBtn">Buscar</button>
+      </div>
+      <div id="results"></div>
+    </div>
 
-  <script src="script.js"></script>
+    <div class="section">
+      <h1>Heróis Favoritos</h1>
+      <div class="search-bar">
+        <input id="favSearchInput" type="text" placeholder="Filtrar favoritos">
+        <button id="favSearchBtn">Buscar</button>
+      </div>
+      <div id="favorites"></div>
+    </div>
+  </div>
+
+  <script>
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const resultsDiv = document.getElementById('results');
+    const favSearchInput = document.getElementById('favSearchInput');
+    const favSearchBtn = document.getElementById('favSearchBtn');
+    const favoritesDiv = document.getElementById('favorites');
+
+    searchBtn.addEventListener('click', searchCharacter);
+    searchInput.addEventListener('keypress', e => { if (e.key === 'Enter') searchCharacter(); });
+    favSearchBtn.addEventListener('click', loadFavorites);
+    favSearchInput.addEventListener('keypress', e => { if (e.key === 'Enter') loadFavorites(); });
+
+    async function searchCharacter() {
+      const name = searchInput.value.trim();
+      if (!name) return;
+      const res = await fetch(`/search?name=${encodeURIComponent(name)}`);
+      const data = await res.json();
+      resultsDiv.innerHTML = '';
+      if (data.response === 'success') {
+        data.results.forEach(hero => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `
+            <div class="card-header">
+              <img src="${hero.image.url}" alt="${hero.name}">
+              <h2>${hero.name}</h2>
+            </div>
+            <div class="card-body">
+              <p><strong>Nome real:</strong> ${hero.biography['full-name'] || 'N/A'}</p>
+              <p><strong>Editor:</strong> ${hero.biography.publisher || 'N/A'}</p>
+              <p><strong>Local de nascimento:</strong> ${hero.biography['place-of-birth'] || 'N/A'}</p>
+              <p><strong>Gênero:</strong> ${hero.appearance.gender || 'N/A'} | <strong>Raça:</strong> ${hero.appearance.race || 'N/A'}</p>
+              <p><strong>Altura:</strong> ${hero.appearance.height.join(', ')} | <strong>Peso:</strong> ${hero.appearance.weight.join(', ')}</p>
+              <p><strong>Ocupação:</strong> ${hero.work.occupation || 'N/A'}</p>
+              <p><strong>Habilidades:</strong></p>
+              <ul>
+                <li>Inteligência: ${hero.powerstats.intelligence}</li>
+                <li>Força: ${hero.powerstats.strength}</li>
+                <li>Velocidade: ${hero.powerstats.speed}</li>
+                <li>Durabilidade: ${hero.powerstats.durability}</li>
+                <li>Poder: ${hero.powerstats.power}</li>
+                <li>Combate: ${hero.powerstats.combat}</li>
+              </ul>
+            </div>
+          `;
+          const addBtn = document.createElement('button');
+          addBtn.textContent = 'Adicionar aos Favoritos';
+          addBtn.addEventListener('click', () => addToFavorites(hero, addBtn));
+          const footer = document.createElement('div');
+          footer.className = 'card-footer';
+          footer.appendChild(addBtn);
+          card.appendChild(footer);
+          resultsDiv.appendChild(card);
+        });
+      } else {
+        resultsDiv.innerHTML = '<p>Nenhum personagem encontrado.</p>';
+      }
+    }
+
+    async function addToFavorites(hero, btn) {
+      const favoriteData = { id: hero.id, name: hero.name, image: hero.image.url };
+      const res = await fetch('/favoritos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(favoriteData)
+      });
+      if (res.ok) {
+        btn.textContent = 'Adicionado';
+        btn.disabled = true;
+        loadFavorites();
+      }
+    }
+
+    async function loadFavorites() {
+      const filter = favSearchInput.value.trim().toLowerCase();
+      const res = await fetch('/favoritos');
+      const data = await res.json();
+      favoritesDiv.innerHTML = '';
+      data.filter(f => f.name.toLowerCase().includes(filter)).forEach(fav => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="card-header">
+            <img src="${fav.image}" alt="${fav.name}">
+            <h2>${fav.name}</h2>
+          </div>
+        `;
+        const footer = document.createElement('div');
+        footer.className = 'actions';
+        const removeBtn = document.createElement('button');
+        removeBtn.textContent = 'Remover dos Favoritos';
+        removeBtn.addEventListener('click', () => removeFavorite(fav.id));
+        const editBtn = document.createElement('button');
+        editBtn.textContent = 'Editar Apelido';
+        editBtn.addEventListener('click', () => editNickname(fav.id, fav.apelido || ''));
+        footer.appendChild(removeBtn);
+        footer.appendChild(editBtn);
+        card.appendChild(footer);
+        favoritesDiv.appendChild(card);
+      });
+    }
+
+    async function removeFavorite(id) {
+      await fetch(`/favoritos/${id}`, { method: 'DELETE' });
+      loadFavorites();
+    }
+
+    async function editNickname(id, current) {
+      const novo = prompt('Novo apelido:', current || '');
+      if (novo !== null) {
+        await fetch(`/favoritos/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ apelido: novo })
+        });
+        loadFavorites();
+      }
+    }
+
+    loadFavorites();
+  </script>
 </body>
 </html>
