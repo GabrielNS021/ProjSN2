@@ -2,7 +2,7 @@ const express = require('express');
 const axios = require('axios');
 const path = require('path');
 const app = express();
-const PORT = 3000;
+const PORT = 8080;
 
 const API_URL = 'https://superheroapi.com/api/eb78f42c1aece237a7276dff8ca900da';
 
