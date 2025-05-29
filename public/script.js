@@ -56,7 +56,11 @@ function addToFavorites(hero) {
   const favoriteData = {
     id: hero.id,
     name: hero.name,
-    image: hero.image.url
+    image: hero.image,
+    biography: hero.biography,
+    appearance: hero.appearance,
+    work: hero.work,
+    powerstats: hero.powerstats
   };
 
   fetch('/favoritos', {
