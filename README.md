@@ -1,12 +1,12 @@
 # Projeto Integrador – Cloud Developing 2025/1
 
-> CRUD simples + API Gateway + Lambda /report + RDS + CI/CD
+> CRUD simples + API Gateway + Lambda /report + RDS
 
 **Grupo**:
 
-1. 10403348 - Gabriel Neman Silva - responsabilidade
-2. 10376918 - Ricardo Carvalho Paixão Brandão - responsabilidade
-3. 10419046 - Gabriel Pastorelli de Almeida - responsabilidade
+1. 10403348 - Gabriel Neman Silva - AWS + Back-end
+2. 10376918 - Ricardo Carvalho Paixão Brandão - Front-end + Documentacao
+3. 10419046 - Gabriel Pastorelli de Almeida - Documentacao + Wireframe
 
 ## 1. Visão geral
 Este projeto implementa um sistema para gerenciar uma lista pessoal de Heróis Favoritos. Este domínio foi selecionado devido ao interesse em heróis e à oportunidade de demonstrar a integração com uma API externa rica em dados, focando na aplicação prática das operações CRUD. As informações dos heróis são obtidas desta API externa, e a aplicação permite armazenar detalhes como nome, imagem, biografia, poderes e um apelido personalizável.
@@ -19,19 +19,22 @@ A API interna oferece funcionalidades CRUD para a lista de favoritos:
 
 ## 2. Arquitetura
 
-![Diagrama](docs/arquitetura.png)
+### Diagrama
+![image](https://github.com/user-attachments/assets/10664dd8-e276-4b43-86ef-f3c7cb364204)
 
+### Tabela
 | Camada | Serviço | Descrição |
 |--------|---------|-----------|
-| Backend | ECS Fargate (ou EC2 + Docker) | API REST Node/Spring/… |
-| Banco   | Amazon RDS              | PostgreSQL / MySQL em subnet privada |
+| Backend | EC2 + Docker | API REST Node|
+| Banco   | Amazon RDS              | PostgreSQL |
 | Gateway | Amazon API Gateway      | Rotas CRUD → ECS · `/report` → Lambda |
 | Função  | AWS Lambda              | Consome a API, gera estatísticas JSON |
-| CI/CD   | CodePipeline + GitHub   | push → build → ECR → deploy |
 
 ## 3. Como rodar localmente
 
-```bash
-cp .env.example .env         # configure variáveis
-docker compose up --build
-# API em http://localhost:3000
+```
+Construir imagem: docker build -t imagem_heroi .
+Construir container: docker run -d --restart unless-stopped -p 80:8080 --name container_heroi --env-file ./cred.env imagem_heroi
+Inicar o Docker: docker start container_heroi
+Acessar: https://localhost:8080
+```
